@@ -58,12 +58,25 @@ int main(int argc, char **argv) {
 
 	printf("Reps\tWeight\n");
 	printf("--------------\n");
+
+	double total_weight = weight + bodyweight;
+	double onerm_result = calc_brzycki(&total_weight, &reps);
+
+	char indicator[16] = "";
+
 	for (int i = 0; i < RM_TABLE_SIZE; i++) {
-		double w = weight + bodyweight;
-		if (bodyweightflag == 0) {
-			printf("%dRM\t%0.2f\n", i+1, RM_TABLE[i] * calc_brzycki(&w, &reps));
+
+		double xrm_result = RM_TABLE[i] * onerm_result;
+
+		if (i + 1 == reps) {
+			memcpy(indicator, " <--", 5);
 		} else {
-			printf("%dRM\t%0.2f (%0.2f + %0.2f)\n", i+1, RM_TABLE[i] * calc_brzycki(&w, &reps), bodyweight, (RM_TABLE[i] * calc_brzycki(&w, &reps)) - bodyweight);
+			memcpy(indicator, "", 1);
+		}
+		if (bodyweightflag == 0) {
+			printf("%dRM\t%0.2f%s\n", i+1, xrm_result, indicator);
+		} else {
+			printf("%dRM\t%0.2f (%0.2f + %0.2f)%s\n", i+1, xrm_result, bodyweight, xrm_result - bodyweight, indicator);
 		}
 	}
 	
