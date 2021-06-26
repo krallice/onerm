@@ -13,10 +13,11 @@ int main(int argc, char **argv) {
 				   0.86, 0.83, 0.81, 0.78, 0.75};
 	const int RM_TABLE_SIZE = sizeof(RM_TABLE)/sizeof(double);
 
-	double reps;
-	double weight;
-	double bodyweight;
-	int bodyweightflag = 0;
+	double reps = 0;
+	double weight = 0;
+	double bodyweight = 0;
+
+	char indicator[16] = "";
 
 	int c;
 
@@ -45,15 +46,10 @@ int main(int argc, char **argv) {
 				break;
 			case 'b':
 				sscanf(optarg, "%lf", &bodyweight);
-				bodyweightflag = 1;
 				break;
 			default:
 				abort();
 		}
-	}
-
-	if (bodyweightflag == 0) {
-		bodyweight = 0;
 	}
 
 	printf("Reps\tWeight\n");
@@ -61,8 +57,6 @@ int main(int argc, char **argv) {
 
 	double total_weight = weight + bodyweight;
 	double onerm_result = calc_brzycki(&total_weight, &reps);
-
-	char indicator[16] = "";
 
 	for (int i = 0; i < RM_TABLE_SIZE; i++) {
 
@@ -73,7 +67,7 @@ int main(int argc, char **argv) {
 		} else {
 			memcpy(indicator, "", 1);
 		}
-		if (bodyweightflag == 0) {
+		if (bodyweight == 0) {
 			printf("%dRM\t%0.2f%s\n", i+1, xrm_result, indicator);
 		} else {
 			printf("%dRM\t%0.2f (%0.2f + %0.2f)%s\n", i+1, xrm_result, bodyweight, xrm_result - bodyweight, indicator);
