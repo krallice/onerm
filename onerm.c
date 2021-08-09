@@ -7,6 +7,22 @@ double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
 }
 
+void print_rep_table(void) {
+	printf("RepMax\tPercentage\n");
+	printf("--------------\n");
+	printf("1RM\t100%%\n");
+	printf("2RM\t97%%\n");
+	printf("3RM\t94%% (~95%%)\n");
+	printf("4RM\t92%%\n");
+	printf("5RM\t89%% (~90%%)\n");
+	printf("6RM\t86%% (~85%%)\n");
+	printf("7RM\t83%%\n");
+	printf("8RM\t81%% (~80%%)\n");
+	printf("9RM\t78%%\n");
+	printf("10RM\t75%%\n");
+	exit(0);
+}
+
 int main(int argc, char **argv) {
 
 	const double RM_TABLE[] = {1, 0.97, 0.94, 0.92, 0.89,
@@ -26,12 +42,13 @@ int main(int argc, char **argv) {
 		static struct option long_options[] = {
 			{"reps", required_argument, 0, 'r'},
 			{"weight", required_argument, 0, 'w'},
-			{"bodyweight", required_argument, 0, 'b'}
+			{"bodyweight", required_argument, 0, 'b'},
+			{"reptable", no_argument, 0, 't'}
 		};
 
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "r:w:b:", long_options, &option_index);
+		c = getopt_long(argc, argv, "r:w:b:t", long_options, &option_index);
 
 		if (c == -1) {
 			break;
@@ -46,6 +63,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'b':
 				sscanf(optarg, "%lf", &bodyweight);
+				break;
+			case 't':
+				print_rep_table();
 				break;
 			default:
 				abort();
