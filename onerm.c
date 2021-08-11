@@ -7,6 +7,23 @@ double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
 }
 
+void print_help(void) {
+
+	printf("One Rep Max Calculator\n");
+
+	printf("Usage:\n");
+	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument>\n");
+	printf("Include Bodyweight in Calculations:\n");
+	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument>\n");
+
+	printf("Print Btzycki RM to RepMax%% Table:\n");
+	printf("  onerm (--reptable | -t)\n");
+
+	printf("Print Help:\n");
+	printf("  onerm (--help | -h)\n");
+	exit(0);
+}
+
 void print_rep_table(void) {
 	printf("RepMax\tPercentage\n");
 	printf("--------------\n");
@@ -43,18 +60,22 @@ int main(int argc, char **argv) {
 			{"reps", required_argument, 0, 'r'},
 			{"weight", required_argument, 0, 'w'},
 			{"bodyweight", required_argument, 0, 'b'},
-			{"reptable", no_argument, 0, 't'}
+			{"reptable", no_argument, 0, 't'},
+			{"help", no_argument, 0, 'h'}
 		};
 
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "r:w:b:t", long_options, &option_index);
+		c = getopt_long(argc, argv, "r:w:b:th", long_options, &option_index);
 
 		if (c == -1) {
 			break;
 		}
 
 		switch(c) {
+			case 'h':
+				print_help();
+				break;
 			case 'r':
 				sscanf(optarg, "%lf", &reps);
 				break;
