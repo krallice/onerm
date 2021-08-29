@@ -3,6 +3,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+const double RM_TABLE[] = {1, 0.97, 0.94, 0.92, 0.89,
+			   0.86, 0.83, 0.81, 0.78, 0.75};
+const int RM_TABLE_SIZE = sizeof(RM_TABLE)/sizeof(double);
+
+
 double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
 }
@@ -11,20 +16,23 @@ void print_help(void) {
 
 	printf("One Rep Max Calculator\n");
 
-	printf("Usage:\n");
+	printf("\nUsage:\n");
 	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument>\n");
-	printf("Include Bodyweight in Calculations:\n");
+	printf("Include Bodyweight:\n");
 	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument>\n");
+
+	printf("\nAdditional Functions:\n\n");
 
 	printf("Print Btzycki RM to RepMax%% Table:\n");
 	printf("  onerm (--reptable | -t)\n");
 
 	printf("Print Help:\n");
-	printf("  onerm (--help | -h)\n");
+	printf("  onerm (--help | -h)\n\n");
 	exit(0);
 }
 
-void print_rep_table(void) {
+static inline void print_rep_table(void) {
+
 	printf("RepMax\tPercentage\n");
 	printf("--------------\n");
 	printf("1RM\t100%%\n");
@@ -40,20 +48,42 @@ void print_rep_table(void) {
 	exit(0);
 }
 
-int main(int argc, char **argv) {
+void print_brzycki(const double *reps, const double *weight, const double *bodyweight) {
 
-	const double RM_TABLE[] = {1, 0.97, 0.94, 0.92, 0.89,
-				   0.86, 0.83, 0.81, 0.78, 0.75};
-	const int RM_TABLE_SIZE = sizeof(RM_TABLE)/sizeof(double);
+	char indicator[16] = "";
+
+	printf("Reps\tWeight\n");
+	printf("--------------\n");
+
+	double total_weight = *weight + *bodyweight;
+	double onerm_result = calc_brzycki(&total_weight, reps);
+
+	for (int i = 0; i < RM_TABLE_SIZE; i++) {
+
+		double xrm_result = RM_TABLE[i] * onerm_result;
+
+		if (i + 1 == *reps) {
+			memcpy(indicator, " <--", 5);
+		} else {
+			memcpy(indicator, "", 1);
+		}
+		if (bodyweight == 0) {
+			printf("%dRM\t%0.2f%s\n", i+1, xrm_result, indicator);
+		} else {
+			printf("%dRM\t%0.2f (%0.2f + %0.2f)%s\n", i+1, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
+		}
+	}
+}
+
+int main(int argc, char **argv) {
 
 	double reps = 0;
 	double weight = 0;
 	double bodyweight = 0;
 
-	char indicator[16] = "";
-
 	int c;
 
+	// Read our arguments:
 	while (1) {
 
 		static struct option long_options[] = {
@@ -89,31 +119,10 @@ int main(int argc, char **argv) {
 				print_rep_table();
 				break;
 			default:
-				abort();
+				print_help();
 		}
 	}
 
-	printf("Reps\tWeight\n");
-	printf("--------------\n");
-
-	double total_weight = weight + bodyweight;
-	double onerm_result = calc_brzycki(&total_weight, &reps);
-
-	for (int i = 0; i < RM_TABLE_SIZE; i++) {
-
-		double xrm_result = RM_TABLE[i] * onerm_result;
-
-		if (i + 1 == reps) {
-			memcpy(indicator, " <--", 5);
-		} else {
-			memcpy(indicator, "", 1);
-		}
-		if (bodyweight == 0) {
-			printf("%dRM\t%0.2f%s\n", i+1, xrm_result, indicator);
-		} else {
-			printf("%dRM\t%0.2f (%0.2f + %0.2f)%s\n", i+1, xrm_result, bodyweight, xrm_result - bodyweight, indicator);
-		}
-	}
-	
+	print_brzycki(&reps, &weight, &bodyweight);
 	return 0;
 }
