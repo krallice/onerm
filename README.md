@@ -1,5 +1,6 @@
 # onerm
 
+```
 One Rep Max Calculator
 
 Usage:
@@ -16,3 +17,4 @@ Print three cycles of 5/3/1 programming:
   onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument> (--531 | -5)
 Print Help:
   onerm (--help | -h)
+```
