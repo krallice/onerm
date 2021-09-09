@@ -5,7 +5,7 @@
 
 const char *VERSION = "1.2.0";
 
-double calc_brzycki(const double *w, const double *r) {
+static inline double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
 }
 
@@ -57,8 +57,8 @@ void print_brzycki(const double *reps, const double *weight, const double *bodyw
 
 	char indicator[16] = "";
 
-	printf("Reps\tWeight\n");
-	printf("--------------\n");
+	printf("Reps\tPercent\tWeight\n");
+	printf("------------------------\n");
 
 	double total_weight = *weight + *bodyweight;
 	double onerm_result = calc_brzycki(&total_weight, reps);
@@ -72,10 +72,10 @@ void print_brzycki(const double *reps, const double *weight, const double *bodyw
 		} else {
 			memcpy(indicator, "", 1);
 		}
-		if (bodyweight == 0) {
-			printf("%dRM\t%0.2f%s\n", i+1, xrm_result, indicator);
+		if (*bodyweight == 0) {
+			printf("%dRM\t%0.0f%%\t%0.2f%s\n", i+1, RM_TABLE[i] * 100, xrm_result, indicator);
 		} else {
-			printf("%dRM\t%0.2f (%0.2f + %0.2f)%s\n", i+1, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
+			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f)%s\n", i+1, RM_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
 		}
 	}
 	exit(0);
@@ -121,7 +121,7 @@ void calc_531(const double *reps, const double *weight, const double *bodyweight
 			}
 
 			// Print percentages:
-			//printf("        (%0.0f%%)\t\t(%0.0f%%)\t\t(%0.0f%%)\t\t(%0.0f%%)\n", SETPERCENTAGES[j] * 100, SETPERCENTAGES[j+3] * 100, SETPERCENTAGES[j+6] * 100, SETPERCENTAGES[j+9] * 100);
+			printf("        (%0.0f%%)\t\t(%0.0f%%)\t\t(%0.0f%%)\t\t(%0.0f%%)\n", SETPERCENTAGES[j] * 100, SETPERCENTAGES[j+3] * 100, SETPERCENTAGES[j+6] * 100, SETPERCENTAGES[j+9] * 100);
 		}
 		training_max += CYCLEINCREMENT;
 		printf("\n");
