@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-const char *VERSION = "1.3.0";
+const char *VERSION = "1.4.0";
 
 static inline double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
@@ -22,12 +22,16 @@ void print_help(void) {
 
 	printf("\nAdditional Functions:\n\n");
 
-	printf("Print Btzycki RM to RepMax%% Table:\n");
+	printf("Print Brzycki RM to RepMax%% Table:\n");
 	printf("  onerm (--reptable | -t)\n");
 
 	printf("Print three cycles of 5/3/1 programming:\n");
 	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument> (--531 | -5)\n");
 	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument> (--531 | -5)\n");
+
+	printf("Print hexagon template:\n");
+	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument> (--hexagon | -6)\n");
+	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument> (--hexagon | -6)\n");
 
 	printf("Print Help:\n");
 	printf("  onerm (--help | -h)\n\n");
@@ -149,6 +153,27 @@ void calc_531(const double *reps, const double *weight, const double *bodyweight
 	exit(0);
 }
 
+void calc_hexagon(const double *reps, const double *weight, const double *bodyweight) {
+
+	// Calculate true 1RM:
+	double total_weight = *weight + *bodyweight;
+	double onerm_result = calc_brzycki(&total_weight, reps);
+
+	if (*bodyweight == 0) {
+		printf("1RM: %0.2f\n", onerm_result);
+		printf("Top Set:\t1x3:\t%0.2f (85%%)\n", onerm_result * 0.85);
+		printf("Volume Sets:\t3x8:\t%0.2f (75%%)\n", onerm_result * 0.75);
+		printf("Backoff Set:\t12+:\t%0.2f (65%%)\n", onerm_result * 0.65);
+	} else {
+		printf("1RM: %0.2f (%0.2f + %0.2f)\n", onerm_result, onerm_result - *bodyweight, *bodyweight);
+		printf("Top Set:\t1x3:\t%0.2f (%0.2f + %0.2f) (85%%)\n", onerm_result * 0.85, onerm_result * 0.85 - *bodyweight, *bodyweight);
+		printf("Volume Sets:\t3x8:\t%0.2f (%0.2f + %0.2f) (75%%)\n", onerm_result * 0.75, onerm_result * 0.75 - *bodyweight, *bodyweight);
+		printf("Backoff Set:\t12+:\t%0.2f (%0.2f + %0.2f) (65%%)\n", onerm_result * 0.65, onerm_result * 0.65 - *bodyweight, *bodyweight);
+	}
+
+	exit(0);
+}
+
 int main(int argc, char **argv) {
 
 	double reps = 0;
@@ -156,6 +181,7 @@ int main(int argc, char **argv) {
 	double bodyweight = 0;
 
 	int flag_531 = 0;
+	int flag_hexagon = 0;
 
 	int c;
 
@@ -168,12 +194,13 @@ int main(int argc, char **argv) {
 			{"bodyweight", required_argument, 0, 'b'},
 			{"reptable", no_argument, 0, 't'},
 			{"531", no_argument, 0, '5'},
+			{"hexagon", no_argument, 0, '6'},
 			{"help", no_argument, 0, 'h'}
 		};
 
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "r:w:b:th5", long_options, &option_index);
+		c = getopt_long(argc, argv, "r:w:b:th56", long_options, &option_index);
 
 		if (c == -1) {
 			break;
@@ -198,6 +225,9 @@ int main(int argc, char **argv) {
 			case '5':
 				flag_531 = 1;
 				break;
+			case '6':
+				flag_hexagon = 1;
+				break;
 			default:
 				print_help();
 		}
@@ -209,6 +239,8 @@ int main(int argc, char **argv) {
 
 	if (flag_531) {
 		calc_531(&reps, &weight, &bodyweight);
+	} else if (flag_hexagon) {
+		calc_hexagon(&reps, &weight, &bodyweight);
 	} else {
 		print_brzycki(&reps, &weight, &bodyweight);
 	}
