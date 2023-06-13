@@ -3,10 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-const char *VERSION = "1.2.0";
+const char *VERSION = "1.3.0";
 
 static inline double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
+	// Epley included for good measure:
+	// return *w * (1 + (*r / 30));
 }
 
 void print_help(void) {
@@ -46,24 +48,35 @@ static inline void print_rep_table(void) {
 	printf("8RM\t81%% (~80%%)\n");
 	printf("9RM\t78%%\n");
 	printf("10RM\t75%%\n");
+	printf("13RM\t70%%\n");
+	printf("16RM\t65%%\n");
+	printf("20RM\t60%%\n");
 	exit(0);
 }
 
 void print_brzycki(const double *reps, const double *weight, const double *bodyweight) {
 
+	// Linear table down to 10RM, then 5% jumps from 70 to 60 inclusive
 	const double RM_TABLE[] = {1, 0.97, 0.94, 0.92, 0.89,
-				   0.86, 0.83, 0.81, 0.78, 0.75};
-	const int RM_TABLE_SIZE = sizeof(RM_TABLE)/sizeof(double);
+				   0.86, 0.83, 0.81, 0.78, 0.75,
+				   // 5% Jumps:
+				   0.70, 0.65, 0.60};
+	const unsigned int RM_TABLE_SIZE = sizeof(RM_TABLE)/sizeof(double);
+
+	// To cater for the 5% Jumps:
+	const unsigned int RM_JUMPS[] = {13, 16, 20};
+	const unsigned int RM_JUMPS_SIZE = sizeof(RM_JUMPS)/sizeof(unsigned int);
 
 	char indicator[16] = "";
+
+	// Calculate 1RM:
+	double total_weight = *weight + *bodyweight;
+	double onerm_result = calc_brzycki(&total_weight, reps);
 
 	printf("Reps\tPercent\tWeight\n");
 	printf("------------------------\n");
 
-	double total_weight = *weight + *bodyweight;
-	double onerm_result = calc_brzycki(&total_weight, reps);
-
-	for (int i = 0; i < RM_TABLE_SIZE; i++) {
+	for (int unsigned i = 0; i < RM_TABLE_SIZE; i++) {
 
 		double xrm_result = RM_TABLE[i] * onerm_result;
 
@@ -73,9 +86,16 @@ void print_brzycki(const double *reps, const double *weight, const double *bodyw
 			memcpy(indicator, "", 1);
 		}
 		if (*bodyweight == 0) {
-			printf("%dRM\t%0.0f%%\t%0.2f%s\n", i+1, RM_TABLE[i] * 100, xrm_result, indicator);
+			printf("%dRM\t%0.0f%%\t%0.2f%s\n", 
+			// Start by incrementing the Repcount by one, when we to the end of the RM_TABLE, use the RM_JUMPS array to
+			// indicate the actual rep acount (as we skip a few):
+			i < RM_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (RM_TABLE_SIZE - RM_JUMPS_SIZE)], 
+			RM_TABLE[i] * 100, xrm_result, indicator);
 		} else {
-			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f)%s\n", i+1, RM_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
+			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f)%s\n", 
+			// Same logic as above:
+			i < RM_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (RM_TABLE_SIZE - RM_JUMPS_SIZE)], 
+			RM_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
 		}
 	}
 	exit(0);
