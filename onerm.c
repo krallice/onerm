@@ -1,14 +1,28 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <string.h>
+#include <math.h>
 #include <stdlib.h>
 
-const char *VERSION = "1.4.2";
+const char *VERSION = "1.5.0";
 
-static inline double calc_brzycki(const double *w, const double *r) {
+typedef double (*calc_function)(const double *, const double *);
+
+double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
-	// Epley included for good measure:
-	// return *w * (1 + (*r / 30));
+}
+
+double calc_epley(const double *w, const double *r) {
+	return *w * (1 + (*r / 30));
+}
+
+double calc_lombardi(const double *w, const double *r) {
+	return *w * pow(*r, 0.10);
+}
+
+void print_version(void) {
+	printf("Version %s\n", VERSION);
+	exit(0);
 }
 
 void print_help(void) {
@@ -19,6 +33,9 @@ void print_help(void) {
 	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument>\n");
 	printf("Include Bodyweight:\n");
 	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument>\n");
+	printf("\nAlternate Formulas (Epley, Lombardi):\n");
+	printf("  onerm [(--bodyweight | -b) <argument>] (--weight | -w) <argument> (--reps | -r) <argument> (--epley | -e)\n");
+	printf("  onerm [(--bodyweight | -b) <argument>] (--weight | -w) <argument> (--reps | -r) <argument> (--lombardi | -l)\n");
 
 	printf("\nAdditional Functions:\n\n");
 
@@ -26,20 +43,20 @@ void print_help(void) {
 	printf("  onerm (--reptable | -t)\n");
 
 	printf("Print three cycles of 5/3/1 programming:\n");
-	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument> (--531 | -5)\n");
-	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument> (--531 | -5)\n");
+	printf("  onerm [(--bodyweight | -b) <argument>] (--weight | -w) <argument> (--reps | -r) <argument> (--531 | -5)\n");
 
 	printf("Print hexagon template:\n");
-	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument> (--hexagon | -6)\n");
-	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument> (--hexagon | -6)\n");
+	printf("  onerm [(--bodyweight | -b) <argument>] (--weight | -w) <argument> (--reps | -r) <argument> (--hexagon | -6)\n");
 
 	printf("Print Help:\n");
-	printf("  onerm (--help | -h)\n\n");
+	printf("  onerm (--help | -h)\n");
+	printf("  onerm (--version | -v)\n\n");
 	exit(0);
 }
 
 static inline void print_rep_table(void) {
 
+	printf("Reference Brzycki Table (Adjusted Lower Bound):\n");
 	printf("RepMax\tPercentage\n");
 	printf("--------------\n");
 	printf("1RM\t100%%\n");
@@ -58,14 +75,26 @@ static inline void print_rep_table(void) {
 	exit(0);
 }
 
-void print_brzycki(const double *reps, const double *weight, const double *bodyweight) {
+void print_1rm(calc_function calcfnc, const double *reps, const double *weight, const double *bodyweight) {
 
 	// Linear table down to 10RM, then 5% jumps from 70 to 60 inclusive
-	const double RM_TABLE[] = {1, 0.97, 0.94, 0.92, 0.89,
-				   0.86, 0.83, 0.81, 0.78, 0.75,
-				   // 5% Jumps:
-				   0.70, 0.65, 0.60};
-	const unsigned int RM_TABLE_SIZE = sizeof(RM_TABLE)/sizeof(double);
+	// Old table (saved incase it proves better):
+	// const double RM_TABLE[] = {1, 0.97, 0.94, 0.92, 0.89,
+	// 			   0.86, 0.83, 0.81, 0.78, 0.75,
+	// 			   // 5% Jumps:
+	// 			   0.70, 0.65, 0.60};
+
+	// Dynamically generate coefficients:
+	const double WEIGHT_UNIT = 1;
+	double COEFFICIENT_TABLE[13];
+	COEFFICIENT_TABLE[0] = 1;
+	for (unsigned int i = 1; i < 10; i++) {
+		COEFFICIENT_TABLE[i] = calcfnc(&WEIGHT_UNIT, &((double){i + 1}));
+	}
+	COEFFICIENT_TABLE[10] = calcfnc(&WEIGHT_UNIT, &((double){13}));
+	COEFFICIENT_TABLE[11] = calcfnc(&WEIGHT_UNIT, &((double){16}));
+	COEFFICIENT_TABLE[12] = calcfnc(&WEIGHT_UNIT, &((double){20}));
+	const unsigned int COEFFICIENT_TABLE_SIZE = sizeof(COEFFICIENT_TABLE)/sizeof(double);
 
 	// To cater for the 5% Jumps:
 	const unsigned int RM_JUMPS[] = {13, 16, 20};
@@ -75,14 +104,14 @@ void print_brzycki(const double *reps, const double *weight, const double *bodyw
 
 	// Calculate 1RM:
 	double total_weight = *weight + *bodyweight;
-	double onerm_result = calc_brzycki(&total_weight, reps);
+	double onerm_result = calcfnc(&total_weight, reps);
 
 	printf("Reps\tPercent\tWeight\n");
 	printf("------------------------\n");
 
-	for (int unsigned i = 0; i < RM_TABLE_SIZE; i++) {
+	for (unsigned int i = 0; i < COEFFICIENT_TABLE_SIZE; i++) {
 
-		double xrm_result = RM_TABLE[i] * onerm_result;
+		double xrm_result = onerm_result / COEFFICIENT_TABLE[i];
 
 		if (i + 1 == *reps) {
 			strcpy(indicator, " <--");
@@ -93,19 +122,19 @@ void print_brzycki(const double *reps, const double *weight, const double *bodyw
 			printf("%dRM\t%0.0f%%\t%0.2f%s\n", 
 			// Start by incrementing the Repcount by one, when we to the end of the RM_TABLE, use the RM_JUMPS array to
 			// indicate the actual rep acount (as we skip a few):
-			i < RM_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (RM_TABLE_SIZE - RM_JUMPS_SIZE)], 
-			RM_TABLE[i] * 100, xrm_result, indicator);
+			i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
+			xrm_result / onerm_result * 100, xrm_result, indicator);
 		} else {
 			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f - %0.2f%%) %s\n", 
 			// Same logic as above:
-			i < RM_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (RM_TABLE_SIZE - RM_JUMPS_SIZE)], 
-			RM_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, ((xrm_result - *bodyweight) / *bodyweight) * 100, indicator);
+			i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
+			COEFFICIENT_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, ((xrm_result - *bodyweight) / *bodyweight) * 100, indicator);
 		}
 	}
 	exit(0);
 }
 
-void calc_531(const double *reps, const double *weight, const double *bodyweight) {
+void calc_531(calc_function calcfnc, const double *reps, const double *weight, const double *bodyweight) {
 
 	const int CYCLECOUNT = 3;
 	const double CYCLEINCREMENT = 2.5;
@@ -121,7 +150,7 @@ void calc_531(const double *reps, const double *weight, const double *bodyweight
 	double total_weight = *weight + *bodyweight;
 
 	// Calculate true 1RM:
-	double onerm_result = calc_brzycki(&total_weight, reps);
+	double onerm_result = calcfnc(&total_weight, reps);
 
 	double training_max = onerm_result * 0.9;
 	printf("1RM: %0.0f\nTraining Max: %0.0f\n", onerm_result, training_max);
@@ -153,11 +182,11 @@ void calc_531(const double *reps, const double *weight, const double *bodyweight
 	exit(0);
 }
 
-void calc_hexagon(const double *reps, const double *weight, const double *bodyweight) {
+void calc_hexagon(calc_function calcfnc, const double *reps, const double *weight, const double *bodyweight) {
 
 	// Calculate true 1RM:
 	double total_weight = *weight + *bodyweight;
-	double onerm_result = calc_brzycki(&total_weight, reps);
+	double onerm_result = calcfnc(&total_weight, reps);
 
 	if (*bodyweight == 0) {
 		printf("1RM: %0.2f\n", onerm_result);
@@ -183,6 +212,9 @@ int main(int argc, char **argv) {
 	int flag_531 = 0;
 	int flag_hexagon = 0;
 
+	// Default to Brzycki:
+	calc_function calcfnc = &calc_brzycki;
+
 	int c;
 
 	// Read our arguments:
@@ -195,18 +227,24 @@ int main(int argc, char **argv) {
 			{"reptable", no_argument, 0, 't'},
 			{"531", no_argument, 0, '5'},
 			{"hexagon", no_argument, 0, '6'},
-			{"help", no_argument, 0, 'h'}
+			{"epley", no_argument, 0, 'e'},
+			{"lombardi", no_argument, 0, 'l'},
+			{"help", no_argument, 0, 'h'},
+			{"version", no_argument, 0, 'v'}
 		};
 
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "r:w:b:th56", long_options, &option_index);
+		c = getopt_long(argc, argv, "r:w:b:thv56le", long_options, &option_index);
 
 		if (c == -1) {
 			break;
 		}
 
 		switch(c) {
+			case 'v':
+				print_version();
+				break;
 			case 'h':
 				print_help();
 				break;
@@ -228,6 +266,12 @@ int main(int argc, char **argv) {
 			case '6':
 				flag_hexagon = 1;
 				break;
+			case 'e':
+				calcfnc = &calc_epley;
+				break;
+			case 'l':
+				calcfnc = &calc_lombardi;
+				break;
 			default:
 				print_help();
 		}
@@ -238,11 +282,11 @@ int main(int argc, char **argv) {
 	}
 
 	if (flag_531) {
-		calc_531(&reps, &weight, &bodyweight);
+		calc_531(calcfnc, &reps, &weight, &bodyweight);
 	} else if (flag_hexagon) {
-		calc_hexagon(&reps, &weight, &bodyweight);
+		calc_hexagon(calcfnc, &reps, &weight, &bodyweight);
 	} else {
-		print_brzycki(&reps, &weight, &bodyweight);
+		print_1rm(calcfnc, &reps, &weight, &bodyweight);
 	}
 	return 0;
 }
