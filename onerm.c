@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-const char *VERSION = "1.4.1";
+const char *VERSION = "1.4.2";
 
 static inline double calc_brzycki(const double *w, const double *r) {
 	return *w * (36 / (37 - *r));
@@ -96,10 +96,10 @@ void print_brzycki(const double *reps, const double *weight, const double *bodyw
 			i < RM_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (RM_TABLE_SIZE - RM_JUMPS_SIZE)], 
 			RM_TABLE[i] * 100, xrm_result, indicator);
 		} else {
-			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f)%s\n", 
+			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f - %0.2f%%) %s\n", 
 			// Same logic as above:
 			i < RM_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (RM_TABLE_SIZE - RM_JUMPS_SIZE)], 
-			RM_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
+			RM_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, ((xrm_result - *bodyweight) / *bodyweight) * 100, indicator);
 		}
 	}
 	exit(0);
