@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-const char *VERSION = "1.5.0";
+const char *VERSION = "1.5.1";
 
 typedef double (*calc_function)(const double *, const double *);
 
@@ -109,9 +109,22 @@ void print_1rm(calc_function calcfnc, const double *reps, const double *weight, 
 	printf("Reps\tPercent\tWeight\n");
 	printf("------------------------\n");
 
+	double xrm_result = 0;
+
 	for (unsigned int i = 0; i < COEFFICIENT_TABLE_SIZE; i++) {
 
-		double xrm_result = onerm_result / COEFFICIENT_TABLE[i];
+		// Account for flawed coefficient table at the tail end of brzycki:
+		if ( (i >= COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE) && (calcfnc == &calc_brzycki) ) {
+			if (i == 10) {
+				xrm_result = onerm_result * 0.70;
+			} else if (i == 11) {
+				xrm_result = onerm_result * 0.65;
+			} else if (i == 12) {
+				xrm_result = onerm_result * 0.60;
+			}
+		} else {
+			xrm_result = onerm_result / COEFFICIENT_TABLE[i];
+		}
 
 		if (i + 1 == *reps) {
 			strcpy(indicator, " <--");
@@ -125,10 +138,14 @@ void print_1rm(calc_function calcfnc, const double *reps, const double *weight, 
 			i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
 			xrm_result / onerm_result * 100, xrm_result, indicator);
 		} else {
-			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f - %0.2f%%) %s\n", 
+			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f) %s\n", 
 			// Same logic as above:
 			i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
-			COEFFICIENT_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, ((xrm_result - *bodyweight) / *bodyweight) * 100, indicator);
+			xrm_result / onerm_result * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
+			// printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f - %0.2f%%) %s\n", 
+			// Same logic as above:
+			// i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
+			// COEFFICIENT_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, ((xrm_result - *bodyweight) / *bodyweight) * 100, indicator);
 		}
 	}
 	exit(0);
