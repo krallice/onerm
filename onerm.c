@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-const char *VERSION = "1.5.1";
+const char *VERSION = "1.5.2";
 
 typedef double (*calc_function)(const double *, const double *);
 
@@ -32,10 +32,10 @@ void print_help(void) {
 	printf("\nUsage:\n");
 	printf("  onerm (--weight | -w) <argument> (--reps | -r) <argument>\n");
 	printf("Include Bodyweight:\n");
-	printf("  onerm (--bodyweight | -b) <argument> (--weight | -w) <argument> (--reps | -r) <argument>\n");
+	printf("  onerm (--bodyweight | -b) <argument> [(--percentage | -p)] (--weight | -w) <argument> (--reps | -r) <argument>\n");
 	printf("\nAlternate Formulas (Epley, Lombardi):\n");
-	printf("  onerm [(--bodyweight | -b) <argument>] (--weight | -w) <argument> (--reps | -r) <argument> (--epley | -e)\n");
-	printf("  onerm [(--bodyweight | -b) <argument>] (--weight | -w) <argument> (--reps | -r) <argument> (--lombardi | -l)\n");
+	printf("  onerm [(--bodyweight | -b) <argument> (--percentage | -p)] (--weight | -w) <argument> (--reps | -r) <argument> (--epley | -e)\n");
+	printf("  onerm [(--bodyweight | -b) <argument> (--percentage | -p)] (--weight | -w) <argument> (--reps | -r) <argument> (--lombardi | -l)\n");
 
 	printf("\nAdditional Functions:\n\n");
 
@@ -75,7 +75,7 @@ static inline void print_rep_table(void) {
 	exit(0);
 }
 
-void print_1rm(calc_function calcfnc, const double *reps, const double *weight, const double *bodyweight) {
+void print_1rm(calc_function calcfnc, const double *reps, const double *weight, const double *bodyweight, const int *flag_bwpercent) {
 
 	// Linear table down to 10RM, then 5% jumps from 70 to 60 inclusive
 	// Old table (saved incase it proves better):
@@ -138,14 +138,17 @@ void print_1rm(calc_function calcfnc, const double *reps, const double *weight, 
 			i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
 			xrm_result / onerm_result * 100, xrm_result, indicator);
 		} else {
-			printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f) %s\n", 
-			// Same logic as above:
-			i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
-			xrm_result / onerm_result * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
-			// printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f - %0.2f%%) %s\n", 
-			// Same logic as above:
-			// i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
-			// COEFFICIENT_TABLE[i] * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, ((xrm_result - *bodyweight) / *bodyweight) * 100, indicator);
+			if (! *flag_bwpercent) {
+				printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f) %s\n", 
+				// Same logic as above:
+				i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
+				xrm_result / onerm_result * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, indicator);
+			} else {
+				printf("%dRM\t%0.0f%%\t%0.2f (%0.2f + %0.2f) \033[0;36m(%0.2f%%)\033[0;37m %s\n", 
+				//Same logic as above:
+				i < COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE ? (i+1) : RM_JUMPS[i - (COEFFICIENT_TABLE_SIZE - RM_JUMPS_SIZE)], 
+				xrm_result / onerm_result * 100, xrm_result, *bodyweight, xrm_result - *bodyweight, ((xrm_result - *bodyweight) / *bodyweight) * 100, indicator);
+			}
 		}
 	}
 	exit(0);
@@ -225,6 +228,7 @@ int main(int argc, char **argv) {
 	double reps = 0;
 	double weight = 0;
 	double bodyweight = 0;
+	int flag_bwpercent = 0;
 
 	int flag_531 = 0;
 	int flag_hexagon = 0;
@@ -246,13 +250,14 @@ int main(int argc, char **argv) {
 			{"hexagon", no_argument, 0, '6'},
 			{"epley", no_argument, 0, 'e'},
 			{"lombardi", no_argument, 0, 'l'},
+			{"percentage", no_argument, 0, 'p'},
 			{"help", no_argument, 0, 'h'},
 			{"version", no_argument, 0, 'v'}
 		};
 
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "r:w:b:thv56le", long_options, &option_index);
+		c = getopt_long(argc, argv, "r:w:b:thv56lep", long_options, &option_index);
 
 		if (c == -1) {
 			break;
@@ -289,6 +294,9 @@ int main(int argc, char **argv) {
 			case 'l':
 				calcfnc = &calc_lombardi;
 				break;
+			case 'p':
+				flag_bwpercent = 1;
+				break;
 			default:
 				print_help();
 		}
@@ -303,7 +311,7 @@ int main(int argc, char **argv) {
 	} else if (flag_hexagon) {
 		calc_hexagon(calcfnc, &reps, &weight, &bodyweight);
 	} else {
-		print_1rm(calcfnc, &reps, &weight, &bodyweight);
+		print_1rm(calcfnc, &reps, &weight, &bodyweight, &flag_bwpercent);
 	}
 	return 0;
 }
